@@ -50,7 +50,7 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
 
 
 class VariationalAutoencoder(object):
-    """ Variation Autoencoder (VAE) with an sklearn-like interface implemented using TensorFlow."""
+    """ Variation Autoencoder (VAE)"""
 
     def __init__(self, network_architecture=None, activation=tf.nn.softplus,
                  learning_rate=0.001, batch_size=100, save_path=None, load_model=None):
@@ -142,12 +142,12 @@ class VariationalAutoencoder(object):
         self.saver = tf.train.Saver()
 
     def reconstruct(self, inputs):
-        """ Use VAE to reconstruct given data. """
+        """Reconstruct given data. """
         assert len(inputs) == self.batch_size
         return self.sess.run(self.x_decoder_mean, feed_dict={self.x: inputs})
 
     def encode(self, inputs):
-        """ Use VAE to embed given data to latent vector. """
+        """ Embed given data to latent vector. """
         return self.sess.run(self.z_mean, feed_dict={self.x: inputs})
 
     def decode(self, z=None):
