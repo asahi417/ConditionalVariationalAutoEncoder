@@ -5,6 +5,7 @@ nohup.out
 .python-version
 *.pyc
 .idea
-model_cvae
+model_cvae/vae.py
+model_cvae/train.py
 push
 log
