@@ -78,11 +78,11 @@ class ConditionalVAE(object):
         :param float learning_rate:
         :param int batch_size:
         """
-        if network_architecture is None:
-            self.network_architecture = dict(n_hidden_encoder_1=500, n_hidden_encoder_2=500, n_hidden_decoder_1=500,
-                                             n_hidden_decoder_2=500, n_input=[28, 28, 1], n_z=20)
-        else:
+        if network_architecture:
             self.network_architecture = network_architecture
+        else:
+            self.network_architecture = dict(n_input=[28, 28, 1], n_z=20)
+
         self.activation = activation
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -113,12 +113,13 @@ class ConditionalVAE(object):
     def _create_network(self):
         """ Create Network, Define Loss Function and Optimizer """
         # tf Graph input
-        self.x = tf.placeholder(tf.float32, [None] + self.network_architecture["n_input"], name="input")
-        self.y = tf.placeholder(tf.int32, [None], name="output")
+        _in_size = [None]
+        _in_size += self.network_architecture["n_input"]
+        self.x = tf.placeholder(tf.float32, _in_size, name="input")
+        self.y = tf.placeholder(tf.float32, [None, self.label_size], name="output")
 
         # Build conditional input
-        _label = tf.one_hot(self.y, self.label_size)
-        _label = tf.reshape(_label, [-1, 1, 1, self.label_size])
+        _label = tf.reshape(self.y, [-1, 1, 1, self.label_size])
         _one = tf.ones([self.batch_size] + self.network_architecture["n_input"][0:-1] + [self.label_size])
         _label = _one * _label
         _layer = tf.concat([self.x, _label], axis=3)
@@ -147,8 +148,7 @@ class ConditionalVAE(object):
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean, tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
 
-        _label = tf.one_hot(self.y, self.label_size)
-        _layer = tf.concat([self.z, _label], axis=1)
+        _layer = tf.concat([self.z, self.y], axis=1)
 
         # Decoder to determine mean of Bernoulli distribution of reconstructed input
         with tf.variable_scope("decoder"):
@@ -183,22 +183,23 @@ class ConditionalVAE(object):
         # saver
         self.saver = tf.train.Saver()
 
-    def reconstruct(self, inputs):
+    def reconstruct(self, inputs, label):
         """Reconstruct given data. """
         assert len(inputs) == self.batch_size
-        return self.sess.run(self.x_decoder_mean, feed_dict={self.x: inputs})
+        assert len(label) == self.batch_size
+        return self.sess.run(self.x_decoder_mean, feed_dict={self.x: inputs, self.y: label})
 
-    def encode(self, inputs):
+    def encode(self, inputs, label):
         """ Embed given data to latent vector. """
-        return self.sess.run(self.z_mean, feed_dict={self.x: inputs})
+        return self.sess.run(self.z_mean, feed_dict={self.x: inputs, self.y: label})
 
-    def decode(self, z=None):
+    def decode(self, label, z=None):
         """ Generate data by sampling from latent space.
         If z_mu is not None, data for this point in latent space is generated.
         Otherwise, z_mu is drawn from prior in latent space.
         """
         z = np.random.normal(size=self.network_architecture["n_z"]) if z is None else z
-        return self.sess.run(self.x_decoder_mean, feed_dict={self.z: z})
+        return self.sess.run(self.x_decoder_mean, feed_dict={self.z: z, self.y: label})
 
 
 if __name__ == '__main__':
