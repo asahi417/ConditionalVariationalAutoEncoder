@@ -181,11 +181,8 @@ class ConditionalVAE(object):
             # deconvolution 3
             # print(_layer.shape)
             _out, _in = 1, _out
-            _layer = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
-            _layer = self.activation(_layer)
-            # print(_layer.shape)
-            # activation
-            self.x_decoder_mean = tf.nn.sigmoid(_layer)
+            _logit = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
+            self.x_decoder_mean = tf.nn.sigmoid(_logit)
 
         # Define loss function
         with tf.name_scope('loss'):
