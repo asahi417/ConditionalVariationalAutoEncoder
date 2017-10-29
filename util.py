@@ -28,69 +28,74 @@ def mnist_loader():
     return mnist, n_sample
 
 
-def mnist_train(model, epoch, save_path="./"):
-    """Train model based on mini-batch of input data."""
+def shape_2d(_x, batch_size):
+    _x = _x.reshape(batch_size, 28, 28)
+    return np.expand_dims(_x, 3)
+
+
+def mnist_train(model, epoch, save_path="./", mode="supervise", input_image=True):
+    """ Train model based on mini-batch of input data.
+
+    :param model:
+    :param epoch:
+    :param save_path:
+    :param mode: conditional, supervised, unsupervised
+    :param input_image: True if use CNN for top of the model
+    :return:
+    """
     # load mnist
     data, n = mnist_loader()
-    # train
     n_iter = int(n / model.batch_size)
     # logger
     if not os.path.exists(save_path):
         os.mkdir(save_path)
     logger = create_log(save_path+"log")
     logger.info("train: data size(%i), batch num(%i), batch size(%i)" % (n, n_iter, model.batch_size))
-    loss_mean = []
+    result = []
     # Initializing the tensor flow variables
     model.sess.run(tf.global_variables_initializer())
     for _e in range(epoch):
-        _loss_mean = []
+        _result = []
         for _b in range(n_iter):
-            _x, _ = data.train.next_batch(model.batch_size)
-            feed_dict = {model.x: _x}
-            summary, loss, _ = model.sess.run([model.summary, model.loss, model.train], feed_dict=feed_dict)
-            model.writer.add_summary(summary, int(_b + _e * model.batch_size))
-            _loss_mean.append(loss)
-        loss_mean.append(np.array(_loss_mean).mean(0))
-        logger.info("epoch %i: loss (%0.3f)" % (_e, loss_mean[-1]))
-        if _e % 50 == 0:
-            model.saver.save(model.sess, "%s/progress-%i-model.ckpt" % (save_path, _e))
-            np.save("%s/progress-%i-acc.npy" % (save_path, _e), np.array(loss_mean))
-    model.saver.save(model.sess, "%s/model.ckpt" % save_path)
-    np.savez("%s/acc.npz" % save_path, loss=np.array(loss_mean), learning_rate=model.learning_rate, epoch=epoch,
-             batch_size=model.batch_size)
-
-
-def mnist_train_2(model, epoch, save_path="./"):
-    """Train model based on mini-batch of input data."""
-    # load mnist
-    data, n = mnist_loader()
-    # train
-    n_iter = int(n / model.batch_size)
-    # logger
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
-    logger = create_log(save_path+"log")
-    logger.info("train: data size(%i), batch num(%i), batch size(%i)" % (n, n_iter, model.batch_size))
-    loss_mean = []
-    # Initializing the tensor flow variables
-    model.sess.run(tf.global_variables_initializer())
-    for _e in range(epoch):
-        _loss_mean = []
-        for _b in range(n_iter):
+            # train
             _x, _y = data.train.next_batch(model.batch_size)
+            _x = shape_2d(_x, model.batch_size) if input_image else _x
 
-            _x = _x.reshape(model.batch_size, 28, 28)
-            _x = np.expand_dims(_x, 3)
+            if mode == "conditional":  # conditional unsupervised model
+                feed_val = [model.summary, model.loss, model.train]
+                feed_dict = {model.x: _x, model.y: _y}
+                summary, __result, _ = model.sess.run(feed_val, feed_dict=feed_dict)
+            elif mode == "supervised":  # supervised model
+                feed_val = [model.summary, model.loss, model.accuracy, model.train]
+                feed_dict = {model.x: _x, model.y: _y, model.is_training: True}
+                summary, loss, acc, _ = model.sess.run(feed_val, feed_dict=feed_dict)
+                __result = [loss, acc]
+            elif mode == "unsupervised":  # unsupervised model
+                feed_val = [model.summary, model.loss, model.train]
+                feed_dict = {model.x: _x}
+                summary, __result, _ = model.sess.run(feed_val, feed_dict=feed_dict)
 
-            feed_dict = {model.x: _x, model.y: _y}
-            summary, loss, _ = model.sess.run([model.summary, model.loss, model.train], feed_dict=feed_dict)
+            _result.append(__result)
             model.writer.add_summary(summary, int(_b + _e * model.batch_size))
-            _loss_mean.append(loss)
-        loss_mean.append(np.array(_loss_mean).mean(0))
-        logger.info("epoch %i: loss (%0.3f)" % (_e, loss_mean[-1]))
+
+        # validation
+        if mode == "supervised":  # supervised model
+            _x = shape_2d(data.test.images, data.test.num_examples) if input_image else data.test.image
+            _y = data.test.labels
+            feed_dict = {model.x: _x, model.y: _y, model.is_training: False}
+            loss, acc = model.sess.run([model.loss, model.accuracy], feed_dict=feed_dict)
+            _result = np.append(np.mean(_result, 0), [loss, acc])
+            logger.info("epoch %i: acc %0.3f, loss %0.3f, train acc %0.3f, train loss %0.3f"
+                        % (_e, acc, loss, _result[1], _result[0]))
+        else:
+            _result = np.mean(_result, 0)
+            logger.info("epoch %i: loss %0.3f" % (_e, _result))
+
+        result.append(_result)
         if _e % 50 == 0:
             model.saver.save(model.sess, "%s/progress-%i-model.ckpt" % (save_path, _e))
-            np.save("%s/progress-%i-acc.npy" % (save_path, _e), np.array(loss_mean))
+            np.save("%s/progress-%i-acc.npy" % (save_path, _e), np.array(result))
+
     model.saver.save(model.sess, "%s/model.ckpt" % save_path)
-    np.savez("%s/acc.npz" % save_path, loss=np.array(loss_mean), learning_rate=model.learning_rate, epoch=epoch,
+    np.savez("%s/acc.npz" % save_path, loss=np.array(result), learning_rate=model.learning_rate, epoch=epoch,
              batch_size=model.batch_size)

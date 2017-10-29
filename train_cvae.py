@@ -1,6 +1,7 @@
 import os
-from util import mnist_train_2
-from model_cvae.model import ConditionalVAE
+import tensorflow as tf
+from util import mnist_train
+from model import ConditionalVAE
 
 if __name__ == '__main__':
     # Ignore warning message by tensor flow
@@ -8,5 +9,9 @@ if __name__ == '__main__':
 
     save_path = "./log/cvae/"
     network_architecture = dict(n_input=[28, 28, 1], n_z=20)
-    model = ConditionalVAE(10, network_architecture=network_architecture, batch_size=100, save_path=save_path)
-    mnist_train_2(model=model, epoch=75, save_path=save_path)
+    model = ConditionalVAE(10, network_architecture=network_architecture, batch_size=100, save_path=save_path,
+                           learning_rate=0.0001, activation=tf.nn.relu)
+    mnist_train(model=model, epoch=75, save_path=save_path, mode="conditional", input_image=True)
+
+    # label_size, network_architecture = None, activation = tf.nn.relu,
+    # learning_rate = 0.001, batch_size = 100, save_path = None, load_model = None
