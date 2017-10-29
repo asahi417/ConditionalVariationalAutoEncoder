@@ -33,7 +33,7 @@ def shape_2d(_x, batch_size):
     return np.expand_dims(_x, 3)
 
 
-def mnist_train(model, epoch, save_path="./", mode="supervise", input_image=True):
+def mnist_train(model, epoch, save_path="./", mode="supervised", input_image=True):
     """ Train model based on mini-batch of input data.
 
     :param model:

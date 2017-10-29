@@ -13,4 +13,4 @@ if __name__ == '__main__':
     network_architecture = dict(n_hidden_encoder_1=500, n_hidden_encoder_2=500, n_hidden_decoder_1=500,
                                 n_hidden_decoder_2=500, n_input=784, n_z=20)
     model = VariationalAutoencoder(network_architecture=network_architecture, batch_size=100, save_path=save_path)
-    mnist_train(model=model, epoch=75, save_path=save_path)
+    mnist_train(model=model, epoch=75, save_path=save_path, mode="unsupervised", input_image=False)

@@ -12,6 +12,3 @@ if __name__ == '__main__':
     model = ConditionalVAE(10, network_architecture=network_architecture, batch_size=100, save_path=save_path,
                            learning_rate=0.0001, activation=tf.nn.relu)
     mnist_train(model=model, epoch=75, save_path=save_path, mode="conditional", input_image=True)
-
-    # label_size, network_architecture = None, activation = tf.nn.relu,
-    # learning_rate = 0.001, batch_size = 100, save_path = None, load_model = None
