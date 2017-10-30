@@ -10,5 +10,5 @@ if __name__ == '__main__':
     save_path = "./log/cvae_cnn3/"
     network_architecture = dict(n_input=[28, 28, 1], n_z=20)
     model = CVAE_CNN3(10, network_architecture=network_architecture, batch_size=100, save_path=save_path,
-                      learning_rate=0.001, activation=tf.nn.relu)
-    mnist_train(model=model, epoch=200, save_path=save_path, mode="conditional", input_image=True)
+                      learning_rate=0.005, activation=tf.nn.relu)
+    mnist_train(model=model, epoch=300, save_path=save_path, mode="conditional", input_image=True)

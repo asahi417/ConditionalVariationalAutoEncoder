@@ -133,7 +133,7 @@ class ConditionalVAE(object):
             _layer = self.activation(_layer)
 
             _layer = slim.flatten(_layer)
-            print(_layer.shape)
+            # print(_layer.shape)
             _shape = _layer.shape.as_list()
             self.z_mean = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
             self.z_log_sigma_sq = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
@@ -151,7 +151,7 @@ class ConditionalVAE(object):
             _w0, _h0 = self.network_architecture["n_input"][0:-1]
             _w1, _h1 = image_size([_w0, _h0], stride_0)
             _w2, _h2 = image_size([_w1, _h1], stride_1)
-            print(_w0, _w1, _w2)
+            # print(_w0, _w1, _w2)
             # full connect
             _in_size = self.network_architecture["n_z"] + self.label_size
             _out = 8
