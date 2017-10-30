@@ -50,6 +50,6 @@ Then, the model and logs are saved at `./log/cnn`.
 For mnist classification, this model achieves over 98 % validation accuracy.
 
 <p align="center">
-  <img src="./img/cnn_log.png" width="500">
+  <img src="./img/cnn_log.png" width="700">
   <br><i>learning log</i>
 </p>
