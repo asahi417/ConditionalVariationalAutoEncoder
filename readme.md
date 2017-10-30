@@ -26,6 +26,19 @@ Thus, the effect of the CNN becomes much smaller than FC.
 In other hand, 3CNN have relatively reasonable learnable variables.
 FC has **20 x 64 = 1280** and the last CNN has **9 x 32 x 64 = 18432**.
 
+Here is the reconstruction result. 
+<p align="center">
+  <img src="./img/cvae_reconst.png" width="500">
+  <br><i>reconstruction</i>
+</p>
+
+By setting latent dimension for two, you can visualize the latent space.
+<p align="center">
+  <img src="./img/cvae_2d.png" width="500">
+  <br><i>latent space image</i>
+</p>
+
+
 
 For theoretic analysis for CVAE, see [Semi-supervised Learning with Deep Generative Models](http://papers.nips.cc/paper/5352-semi-supervised-learning-with-deep-generative-models).
 
