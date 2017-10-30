@@ -1,4 +1,4 @@
-# Variational Autoencoder
+# Conditional Variational Autoencoder
 [![dep1](https://img.shields.io/badge/Tensorflow-1.3+-blue.svg)](https://www.tensorflow.org/)
 [![dep1](https://img.shields.io/badge/Status-Work_In_Progress-orange.svg)](https://www.tensorflow.org/)
 
@@ -15,31 +15,40 @@ I have built two type of CVAE:
     - encoder: CNN x 2 + FC x 1
     - decoder: deCNN x 2 + FC x 1
  
-2CNN model use CNN with fixed stride (2 x 2) and kernel size (4 x 4), and channel size is 
-`1 + label number -> 16 -> 32`.
+2CNN model use CNN with fixed stride (2 x 2) and kernel size (4 x 4).
 The problem of this model is that, the size of learnable variables of FC (fully connected) layer is much larger 
 than that of CNN layer.
 More precisely, if the latent dimension is 20, the learnable variables becomes
 **20 x 512 = 10240** for FC and **4 x 16 x 32 = 2048** for the biggest CNN.
-Thus, the effect of the CNN becomes much smaller than FC.
+It might be difficult to learn such a huge FC layer that it could be trapped local minima or cause overfitting.
 
-In other hand, 3CNN have relatively reasonable learnable variables.
-FC has **20 x 64 = 1280** and the last CNN has **9 x 32 x 64 = 18432**.
+In other hand, 3CNN model have relatively small learnable variables for FC, which has **20 x 64 = 1280** and the last CNN has **9 x 32 x 64 = 18432**.
 
-Here is the reconstruction result. 
+Here is the reconstruction result of 3CNN model.
 <p align="center">
   <img src="./img/cvae_reconst.png" width="500">
-  <br><i>reconstruction</i>
+  <br><i>reconstruction 3CNN model</i>
 </p>
 
 By setting latent dimension for two, you can visualize the latent space.
 <p align="center">
   <img src="./img/cvae_2d.png" width="500">
-  <br><i>latent space image</i>
+  <br><i>2d latent space</i>
 </p>
 
+Here is the reconstruction result of 2CNN model. 
+<p align="center">
+  <img src="./img/cvae_2cnn_reconst.png" width="500">
+  <br><i>reconstruction 2CNN model</i>
+</p>
 
-
+It seems that the training is somewhat failed, and 3CNN is much easy to train than 2CNN.  
+You can test by simply run
+```
+python train_cvae_cnn3.py
+```
+to start train model for MNIST and
+the visualization is summarized at `visualization_cvae.ipynb`.
 For theoretic analysis for CVAE, see [Semi-supervised Learning with Deep Generative Models](http://papers.nips.cc/paper/5352-semi-supervised-learning-with-deep-generative-models).
 
 ## VAE
@@ -58,10 +67,10 @@ Once the model is trained, you can see the reconstruction result.
 By setting latent dimension for two, you can visualize the latent space.
 <p align="center">
   <img src="./img/vae_2d.png" width="500">
-  <br><i>latent space image</i>
+  <br><i>2d latent space</i>
 </p>
 
-The visualization is summarized at `visualization_vae.ipynb`
+The visualization is summarized at `visualization_vae.ipynb`.
 More detail, see [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114).
 
 ## CNN
