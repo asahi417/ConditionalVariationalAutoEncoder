@@ -47,7 +47,7 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
     # clipping: remedy for explosion
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-50, clip_value_max=50)
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-5, clip_value_max=1e+5)
     return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
