@@ -8,4 +8,3 @@ nohup.out
 model_cvae/vae.py
 model_cvae/train.py
 push
-log
