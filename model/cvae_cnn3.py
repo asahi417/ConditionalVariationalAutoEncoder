@@ -54,8 +54,8 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     induced by the encoder on the data and some prior. This acts as a kind of regularizer. This can be interpreted as
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
-    # clipping: remedy for explosion
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-5, clip_value_max=1e+5)
+    latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
     return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
@@ -111,10 +111,8 @@ class ConditionalVAE(object):
     def _create_network(self):
         """ Create Network, Define Loss Function and Optimizer """
         # tf Graph input
-        _in_size = [None]
-        _in_size += self.network_architecture["n_input"]
-        self.x = tf.placeholder(tf.float32, _in_size, name="input")
-        self.y = tf.placeholder(tf.float32, [None, self.label_size], name="output")
+        self.x = tf.placeholder(tf.float32, [self.batch_size] + self.network_architecture["n_input"], name="input")
+        self.y = tf.placeholder(tf.float32, [self.batch_size, self.label_size], name="output")
 
         # Build conditional input
         _label = tf.reshape(self.y, [-1, 1, 1, self.label_size])
@@ -141,14 +139,17 @@ class ConditionalVAE(object):
             _layer = slim.flatten(_layer)
             # print(_layer.shape)
             _shape = _layer.shape.as_list()
+
+            # clipping: remedy for explosion
             self.z_mean = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
+
             self.z_log_sigma_sq = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
 
         # Draw one sample z from Gaussian distribution
         eps = tf.random_normal((self.batch_size, self.network_architecture["n_z"]), mean=0, stddev=1, dtype=tf.float32)
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean, tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
-
+        # print(self.z.shape)
         _layer = tf.concat([self.z, self.y], axis=1)
 
         # Decoder to determine mean of Bernoulli distribution of reconstructed input
@@ -206,12 +207,12 @@ class ConditionalVAE(object):
         """ Embed given data to latent vector. """
         return self.sess.run(self.z_mean, feed_dict={self.x: inputs, self.y: label})
 
-    def decode(self, label, z=None):
+    def decode(self, label, z=None, std=0.01):
         """ Generate data by sampling from latent space.
         If z_mu is not None, data for this point in latent space is generated.
         Otherwise, z_mu is drawn from prior in latent space.
         """
-        z = np.random.normal(size=self.network_architecture["n_z"]) if z is None else z
+        z = np.random.randn(self.batch_size, self.network_architecture["n_z"])*std if z is None else z
         return self.sess.run(self.x_decoder_mean, feed_dict={self.z: z, self.y: label})
 
 
