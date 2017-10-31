@@ -8,3 +8,8 @@ nohup.out
 model_cvae/vae.py
 model_cvae/train.py
 push
+MNIST_data
+log/*/events*
+log/*/*model*
+log/*/*acc*
+log/*/checkpoint

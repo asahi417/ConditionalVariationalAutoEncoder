@@ -1,0 +1,3 @@
+H1, 2017-10-31 15:33:52,503     INFO train: data size(55000), batch num(550), batch size(100)
+H1, 2017-10-31 15:35:09,129     INFO epoch 0: loss 5.133
+H1, 2017-10-31 15:36:16,186     INFO epoch 1: loss 3.558

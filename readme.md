@@ -36,6 +36,13 @@ By setting latent dimension for two, you can visualize the latent space.
   <br><i>2d latent space</i>
 </p>
 
+Generation of given label.
+<p align="center">
+  <img src="./img/cvae_gen.png" width="500">
+  <br><i>2d latent space</i>
+</p>
+
+
 Here is the reconstruction result of 2CNN model. 
 <p align="center">
   <img src="./img/cvae_2cnn_reconst.png" width="500">
