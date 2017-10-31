@@ -37,7 +37,7 @@ def full_connected(x, weight_shape, initializer):
     return tf.add(tf.matmul(x, weight), bias)
 
 
-def reconstruction_loss(original, reconstruction, eps=1e-5):
+def reconstruction_loss(original, reconstruction, eps=1e-10):
     """
     The reconstruction loss (the negative log probability of the input under the reconstructed Bernoulli distribution
     induced by the decoder in the data space). This can be interpreted as the number of "nats" required for
@@ -54,12 +54,8 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     induced by the encoder on the data and some prior. This acts as a kind of regularizer. This can be interpreted as
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
-    # latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
-    # latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
-
-    latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-3, clip_value_max=1e+3)
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-5, clip_value_max=1e+5)
-
+    latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
     return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
