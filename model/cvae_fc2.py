@@ -8,26 +8,6 @@ def image_size(_shape, stride):
     return int(np.ceil(_shape[0] / stride[0])), int(np.ceil(_shape[1] / stride[1]))
 
 
-def convolution(x, weight_shape, stride, initializer, padding="SAME"):
-    """ 2d convolution layer
-    - weight_shape: width, height, input channel, output channel
-    """
-    weight = tf.Variable(initializer(shape=weight_shape))
-    bias = tf.Variable(tf.zeros([weight_shape[-1]]), dtype=tf.float32)
-    return tf.add(tf.nn.conv2d(x, weight, strides=[1, stride[0], stride[1], 1], padding=padding), bias)
-
-
-def deconvolution(x, weight_shape, output_shape, stride, initializer, padding="SAME"):
-    """ 2d deconvolution layer
-    - weight_shape: width, height, input channel, output channel
-    """
-    weight = tf.Variable(initializer(shape=weight_shape))
-    bias = tf.Variable(tf.zeros([weight_shape[2]]), dtype=tf.float32)
-    _layer = tf.nn.conv2d_transpose(x, weight, output_shape=output_shape, strides=[1, stride[0], stride[1], 1],
-                                    padding=padding, data_format="NHWC")
-    return tf.add(_layer, bias)
-
-
 def full_connected(x, weight_shape, initializer):
     """ fully connected layer
     - weight_shape: input size, output size
@@ -123,64 +103,66 @@ class ConditionalVAE(object):
 
         # Encoder network to determine mean and (log) variance of Gaussian distribution in latent space
         with tf.variable_scope("encoder"):
+            # print(_layer.shape)
             # convolution 1
-            _out, _in, ks = 16, _ch, [6, 6]
-            _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
+            _layer = convolution(_layer, [6, 6, _ch, 16], [3, 3], self.ini_c, padding="VALID")
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
+            # print(_layer.shape)
             # convolution 2
-            _out, _in, ks = 32, _out, [4, 4]
-            _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
+            _layer = convolution(_layer, [4, 4, 16, 32], [2, 2], self.ini_c, padding="VALID")
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
+            # print(_layer.shape)
             # convolution 3
-            _out, _in, ks = 64, _out, [2, 2]
-            _layer = convolution(_layer, ks + [_in, _out], [2, 2], self.ini_c)
+            _layer = convolution(_layer, [3, 3, 32, 64], [1, 1], self.ini_c, padding="VALID")
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
             # full connect to get "mean" and "sigma"
             _layer = slim.flatten(_layer)
-            print(_layer.shape[0])
+            # print(_layer.shape)
             _shape = _layer.shape.as_list()
 
+            # clipping: remedy for explosion
             self.z_mean = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
+
             self.z_log_sigma_sq = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
 
         # Draw one sample z from Gaussian distribution
         eps = tf.random_normal((self.batch_size, self.network_architecture["n_z"]), mean=0, stddev=1, dtype=tf.float32)
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean, tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
+        # print(self.z.shape)
         _layer = tf.concat([self.z, self.y], axis=1)
 
         # Decoder to determine mean of Bernoulli distribution of reconstructed input
         with tf.variable_scope("decoder"):
-            stride_0, stride_1, stride_2 = [4, 4], [3, 3], [2, 2]
+            stride_0, stride_1, stride_2 = [4, 4], [3, 3], [3, 3]
             _w0, _h0 = self.network_architecture["n_input"][0:-1]
             _w1, _h1 = image_size([_w0, _h0], stride_0)
             _w2, _h2 = image_size([_w1, _h1], stride_1)
             _w3, _h3 = image_size([_w2, _h2], stride_2)
+            # print(_w0, _w1, _w2, _w3)
             # full connect
             _in_size = self.network_architecture["n_z"] + self.label_size
-            _out = 64
+            _out = 32
+            # print(_layer.shape)
             _layer = full_connected(_layer, [_in_size, int(_w3 * _h3 * _out)], self.ini)
             _layer = self.activation(_layer)
-            print(_in_size * _w3 * _h3 * _out)
             # reshape to the image
+            # print(_layer.shape)
             _layer = tf.reshape(_layer, [-1, _w3, _h3, _out])
             # deconvolution 1
-            _out, _in, ks = 32, _out, [2, 2]
-            _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w2, _h2, _out], stride_2, self.ini_c)
+            # print(_layer.shape)
+            _out, _in = 16, _out
+            _layer = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w2, _h2, _out], stride_2, self.ini_c)
             _layer = self.activation(_layer)
-            print(_in * _out * ks[0] * ks[1])
             # deconvolution 2
-            _out, _in, ks = 16, _out, [3, 3]
-            _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w1, _h1, _out], stride_1, self.ini_c)
+            # print(_layer.shape)
+            _out, _in = 8, _out
+            _layer = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w1, _h1, _out], stride_1, self.ini_c)
             _layer = self.activation(_layer)
-            print(_in * _out * ks[0] * ks[1])
             # deconvolution 3
-            _out, _in, ks = 1, _out, [4, 4]
-            _logit = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
-            print(_in * _out * ks[0] * ks[1])
+            # print(_layer.shape)
+            _out, _in = 1, _out
+            _logit = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
             self.x_decoder_mean = tf.nn.sigmoid(_logit)
 
         # Define loss function

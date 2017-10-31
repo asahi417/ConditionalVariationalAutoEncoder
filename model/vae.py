@@ -155,11 +155,10 @@ class VariationalAutoencoder(object):
         """ Embed given data to latent vector. """
         return self.sess.run(self.z_mean, feed_dict={self.x: inputs})
 
-    def decode(self, z=None):
+    def decode(self, z=None, std=0.01, mu=0):
         """ Generate data by sampling from latent space.
         If z_mu is not None, data for this point in latent space is generated.
         Otherwise, z_mu is drawn from prior in latent space.
         """
-        z = np.random.normal(size=self.network_architecture["n_z"]) if z is None else z
+        z = mu + np.random.randn(self.batch_size, self.network_architecture["n_z"]) * std if z is None else z
         return self.sess.run(self.x_decoder_mean, feed_dict={self.z: z})
-
