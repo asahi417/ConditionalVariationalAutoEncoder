@@ -22,11 +22,9 @@ def reconstruction_loss(original, reconstruction, eps=1e-10):
     """
     _tmp = original * tf.log(eps + reconstruction) + (1 - original) * tf.log(eps + 1 - reconstruction)
     _loss = -tf.reduce_sum(_tmp, 1)
-    if tf.is_nan(_loss) or tf.is_inf(_loss):
-        return 0
-    else:
-        return _loss
-
+    _loss = tf.where(tf.is_nan(_loss), 0, _loss)
+    _loss = tf.where(tf.is_inf(_loss), 0, _loss)
+    return _loss
 
 def latent_loss(latent_mean, latent_log_sigma_sq):
     """
@@ -37,10 +35,9 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
     latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
     _loss = -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
-    if tf.is_nan(_loss) or tf.is_inf(_loss):
-        return 0
-    else:
-        return _loss
+    _loss = tf.where(tf.is_nan(_loss), 0, _loss)
+    _loss = tf.where(tf.is_inf(_loss), 0, _loss)
+    return _loss
 
 
 class ConditionalVAE(object):
