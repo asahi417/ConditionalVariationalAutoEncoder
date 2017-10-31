@@ -37,7 +37,11 @@ def reconstruction_loss(original, reconstruction, eps=1e-10):
     Adding 1e-10 to avoid evaluation of log(0.0)
     """
     _tmp = original * tf.log(eps + reconstruction) + (1 - original) * tf.log(eps + 1 - reconstruction)
-    return -tf.reduce_sum(_tmp, 1)
+    _loss = -tf.reduce_sum(_tmp, 1)
+    if tf.is_nan(_loss) or tf.is_inf(_loss):
+        return 0
+    else:
+        return _loss
 
 
 def latent_loss(latent_mean, latent_log_sigma_sq):
@@ -48,7 +52,11 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     """
     # clipping: remedy for explosion
     latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-5, clip_value_max=1e+5)
-    return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
+    _loss = -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
+    if tf.is_nan(_loss) or tf.is_inf(_loss):
+        return 0
+    else:
+        return _loss
 
 
 class VariationalAutoencoder(object):
