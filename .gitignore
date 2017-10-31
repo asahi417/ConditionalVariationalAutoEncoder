@@ -9,6 +9,7 @@ model_cvae/vae.py
 model_cvae/train.py
 push
 MNIST_data
+log
 log/*/events*
 log/*/*model*
 log/*/*acc*
