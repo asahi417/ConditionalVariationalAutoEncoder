@@ -22,8 +22,8 @@ def reconstruction_loss(original, reconstruction, eps=1e-10):
     """
     _tmp = original * tf.log(eps + reconstruction) + (1 - original) * tf.log(eps + 1 - reconstruction)
     _loss = -tf.reduce_sum(_tmp, 1)
-    _loss = tf.where(tf.is_nan(_loss), 0, _loss)
-    _loss = tf.where(tf.is_inf(_loss), 0, _loss)
+    _loss = tf.where(tf.is_nan(_loss), 0., _loss)
+    _loss = tf.where(tf.is_inf(_loss), 0., _loss)
     return _loss
 
 def latent_loss(latent_mean, latent_log_sigma_sq):
