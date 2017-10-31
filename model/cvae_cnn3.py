@@ -98,7 +98,7 @@ class ConditionalVAE(object):
         # Summary
         tf.summary.scalar("loss", self.loss)
         # Launch the session
-        self.sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))
+        self.sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
         # Summary writer for tensor board
         self.summary = tf.summary.merge_all()
         if save_path:
