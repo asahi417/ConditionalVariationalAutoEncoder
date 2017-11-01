@@ -45,11 +45,7 @@ def reconstruction_loss(original, reconstruction, eps=1e-10):
     Adding 1e-10 to avoid evaluation of log(0.0)
     """
     _tmp = original * tf.log(eps + reconstruction) + (1 - original) * tf.log(eps + 1 - reconstruction)
-    _loss = -tf.reduce_sum(_tmp, 1)
-    if tf.is_nan(_loss) or tf.is_inf(_loss):
-        return 0
-    else:
-        return _loss
+    return -tf.reduce_sum(_tmp, 1)
 
 
 def latent_loss(latent_mean, latent_log_sigma_sq):
@@ -58,41 +54,44 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     induced by the encoder on the data and some prior. This acts as a kind of regularizer. This can be interpreted as
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
-    latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
-    _loss = -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
-    if tf.is_nan(_loss) or tf.is_inf(_loss):
-        return 0
-    else:
-        return _loss
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+2)
+    return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
 class ConditionalVAE(object):
     """ Conditional VAE
-    Inputs data must be normalized to be in range of 0 to 1
-    (since VAE uses Bernoulli distribution for reconstruction loss)
+
+    To trainable variables at FC be small and those at CNN be large
+
+    - Encoder: input (3d matrix) -> CNN x 3 + FC x 1 -> latent
+        CNN1 (ks: [6, 6], st: [3, 3], ch: 16),
+        CNN2 (ks: [4, 4], st: [3, 3], ch: 32),
+        CNN3 (ks: [2, 2], st: [2, 2], ch: 64)
+    - Decoder: latent -> FC x 1 + DeCNN x 3 -> output (3d matrix)
+        DeCNN1 (ks: [2, 2], st: [2, 2], ch: 32),
+        DeCNN2 (ks: [3, 3], st: [3, 3], ch: 16),
+        DeCNN3 (ks: [4, 4], st: [4, 4], ch: 1)
     """
 
-    def __init__(self, label_size, network_architecture=None, activation=tf.nn.relu,
-                 learning_rate=0.001, batch_size=100, save_path=None, load_model=None):
+    def __init__(self, label_size, network_architecture, activation=tf.nn.relu, learning_rate=0.001,
+                 batch_size=100, save_path=None, load_model=None, max_grad_norm=None):
         """
+        :param int label_size: number of unique label
         :param dict network_architecture: dictionary with following elements
             n_input: shape of input
             n_z: dimensionality of latent space
-
         :param activation: activation function (tensor flow function)
         :param float learning_rate:
         :param int batch_size:
+        :param str save_path: path to save
+        :param str load_model: load saved model
         """
-        if network_architecture:
-            self.network_architecture = network_architecture
-        else:
-            self.network_architecture = dict(n_input=[28, 28, 1], n_z=20)
-
+        self.network_architecture = network_architecture
         self.activation = activation
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.label_size = label_size
+        self.max_grad_norm = max_grad_norm
 
         # Initializer
         if "relu" in self.activation.__name__:
@@ -131,77 +130,81 @@ class ConditionalVAE(object):
 
         # Encoder network to determine mean and (log) variance of Gaussian distribution in latent space
         with tf.variable_scope("encoder"):
-            # print(_layer.shape)
             # convolution 1
-            _layer = convolution(_layer, [6, 6, _ch, 16], [3, 3], self.ini_c, padding="VALID")
+            _out, _in, ks = 16, _ch, [6, 6]
+            _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
             _layer = self.activation(_layer)
-            # print(_layer.shape)
+            # -print(_out * _in * ks[0] * ks[1])
             # convolution 2
-            _layer = convolution(_layer, [4, 4, 16, 32], [2, 2], self.ini_c, padding="VALID")
+            _out, _in, ks = 32, _out, [4, 4]
+            _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
             _layer = self.activation(_layer)
-            # print(_layer.shape)
+            # -print(_out * _in * ks[0] * ks[1])
             # convolution 3
-            _layer = convolution(_layer, [3, 3, 32, 64], [1, 1], self.ini_c, padding="VALID")
+            _out, _in, ks = 64, _out, [2, 2]
+            _layer = convolution(_layer, ks + [_in, _out], [2, 2], self.ini_c)
             _layer = self.activation(_layer)
+            # -print(_out * _in * ks[0] * ks[1])
             # full connect to get "mean" and "sigma"
             _layer = slim.flatten(_layer)
-            # print(_layer.shape)
+            # -print(_layer.shape[0])
             _shape = _layer.shape.as_list()
 
-            # clipping: remedy for explosion
             self.z_mean = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
-
             self.z_log_sigma_sq = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
 
         # Draw one sample z from Gaussian distribution
         eps = tf.random_normal((self.batch_size, self.network_architecture["n_z"]), mean=0, stddev=1, dtype=tf.float32)
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean, tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
-        # print(self.z.shape)
         _layer = tf.concat([self.z, self.y], axis=1)
 
         # Decoder to determine mean of Bernoulli distribution of reconstructed input
         with tf.variable_scope("decoder"):
-            stride_0, stride_1, stride_2 = [4, 4], [3, 3], [3, 3]
+            stride_0, stride_1, stride_2 = [4, 4], [3, 3], [2, 2]
             _w0, _h0 = self.network_architecture["n_input"][0:-1]
             _w1, _h1 = image_size([_w0, _h0], stride_0)
             _w2, _h2 = image_size([_w1, _h1], stride_1)
             _w3, _h3 = image_size([_w2, _h2], stride_2)
-            # print(_w0, _w1, _w2, _w3)
             # full connect
             _in_size = self.network_architecture["n_z"] + self.label_size
-            _out = 32
-            # print(_layer.shape)
+            _out = 64
             _layer = full_connected(_layer, [_in_size, int(_w3 * _h3 * _out)], self.ini)
             _layer = self.activation(_layer)
+            # -print(_in_size * _w3 * _h3 * _out)
             # reshape to the image
-            # print(_layer.shape)
             _layer = tf.reshape(_layer, [-1, _w3, _h3, _out])
             # deconvolution 1
-            # print(_layer.shape)
-            _out, _in = 16, _out
-            _layer = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w2, _h2, _out], stride_2, self.ini_c)
+            _out, _in, ks = 32, _out, [2, 2]
+            _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w2, _h2, _out], stride_2, self.ini_c)
             _layer = self.activation(_layer)
+            # -print(_in * _out * ks[0] * ks[1])
             # deconvolution 2
-            # print(_layer.shape)
-            _out, _in = 8, _out
-            _layer = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w1, _h1, _out], stride_1, self.ini_c)
+            _out, _in, ks = 16, _out, [3, 3]
+            _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w1, _h1, _out], stride_1, self.ini_c)
             _layer = self.activation(_layer)
+            # -print(_in * _out * ks[0] * ks[1])
             # deconvolution 3
-            # print(_layer.shape)
-            _out, _in = 1, _out
-            _logit = deconvolution(_layer, [4, 4, _out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
+            _out, _in, ks = 1, _out, [4, 4]
+            _logit = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
+            # -print(_in * _out * ks[0] * ks[1])
             self.x_decoder_mean = tf.nn.sigmoid(_logit)
 
         # Define loss function
         with tf.name_scope('loss'):
-            loss_1 = reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean)
-            loss_2 = latent_loss(self.z_mean, self.z_log_sigma_sq)
-            self.loss = tf.reduce_mean(loss_1 + loss_2)  # average over batch
+            self.re_loss = tf.reduce_mean(reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean))
+            self.latent_loss = tf.reduce_mean(latent_loss(self.z_mean, self.z_log_sigma_sq))
+            self.loss = tf.where(tf.is_nan(self.re_loss), 0.0, self.re_loss) + \
+                tf.where(tf.is_nan(self.latent_loss), 0.0, self.latent_loss)
 
         # Define optimizer
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train = slim.learning.create_train_op(self.loss, optimizer)
+        if self.max_grad_norm:
+            _var = tf.trainable_variables()
+            grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, _var), self.max_grad_norm)
+            self.train = optimizer.apply_gradients(zip(grads, _var))
+        else:
+            self.train = optimizer.minimize(self.loss)
         # saver
         self.saver = tf.train.Saver()
 

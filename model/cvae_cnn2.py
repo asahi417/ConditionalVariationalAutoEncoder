@@ -54,18 +54,23 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     induced by the encoder on the data and some prior. This acts as a kind of regularizer. This can be interpreted as
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
-    # clipping: remedy for explosion
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-5, clip_value_max=1e+5)
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+2)
     return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
 class ConditionalVAE(object):
     """ Conditional VAE
-    Inputs data must be normalized to be in range of 0 to 1
-    (since VAE uses Bernoulli distribution for reconstruction loss)
-    """
 
-    def __init__(self, label_size, network_architecture=None, activation=tf.nn.relu,
+    Trainable variables at FC layer is much bigger than those at CNN
+
+        - Encoder: input (3d matrix) -> CNN x 2 + FC x 1 -> latent
+            CNN1 (ks: [5, 5], st: [2, 2], ch: 16),
+            CNN2 (ks: [5, 5], st: [2, 2], ch: 32),
+        - Decoder: latent -> FC x 1 + DeCNN x 2 -> output (3d matrix)
+            DeCNN1 (ks: [5, 5], st: [2, 2], ch: 16),
+            DeCNN2 (ks: [5, 5], st: [2, 2], ch: 1)
+        """
+    def __init__(self, label_size, network_architecture, activation=tf.nn.relu, max_grad_norm=1,
                  learning_rate=0.001, batch_size=100, save_path=None, load_model=None):
         """
         :param dict network_architecture: dictionary with following elements
@@ -76,11 +81,8 @@ class ConditionalVAE(object):
         :param float learning_rate:
         :param int batch_size:
         """
-        if network_architecture:
-            self.network_architecture = network_architecture
-        else:
-            self.network_architecture = dict(n_input=[28, 28, 1], n_z=20)
-
+        self.network_architecture = network_architecture
+        self.max_grad_norm = max_grad_norm
         self.activation = activation
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -175,13 +177,20 @@ class ConditionalVAE(object):
 
         # Define loss function
         with tf.name_scope('loss'):
-            loss_1 = reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean)
-            loss_2 = latent_loss(self.z_mean, self.z_log_sigma_sq)
-            self.loss = tf.reduce_mean(loss_1 + loss_2)  # average over batch
+            self.re_loss = tf.reduce_mean(reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean))
+            self.latent_loss = tf.reduce_mean(latent_loss(self.z_mean, self.z_log_sigma_sq))
+            self.loss = tf.where(tf.is_nan(self.re_loss), 0.0, self.re_loss) + \
+                tf.where(tf.is_nan(self.latent_loss), 0.0, self.latent_loss)
 
         # Define optimizer
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train = slim.learning.create_train_op(self.loss, optimizer)
+        if self.max_grad_norm:
+            _var = tf.trainable_variables()
+            grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, _var), self.max_grad_norm)
+            self.train = optimizer.apply_gradients(zip(grads, _var))
+        else:
+            self.train = optimizer.minimize(self.loss)
+
         # saver
         self.saver = tf.train.Saver()
 

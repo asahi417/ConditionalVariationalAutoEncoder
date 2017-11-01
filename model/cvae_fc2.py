@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import xavier_initializer_conv2d, variance_scaling_initializer, xavier_initializer
-import tensorflow.contrib.slim as slim
 import numpy as np
 
 
@@ -21,10 +20,8 @@ def reconstruction_loss(original, reconstruction, eps=1e-10):
     Adding 1e-10 to avoid evaluation of log(0.0)
     """
     _tmp = original * tf.log(eps + reconstruction) + (1 - original) * tf.log(eps + 1 - reconstruction)
-    _loss = -tf.reduce_sum(_tmp, 1)
-    _loss = tf.where(tf.is_nan(_loss), 0., _loss)
-    _loss = tf.where(tf.is_inf(_loss), 0., _loss)
-    return _loss
+    return -tf.reduce_sum(_tmp, 1)
+
 
 def latent_loss(latent_mean, latent_log_sigma_sq):
     """
@@ -32,22 +29,18 @@ def latent_loss(latent_mean, latent_log_sigma_sq):
     induced by the encoder on the data and some prior. This acts as a kind of regularizer. This can be interpreted as
     the number of "nats" required for transmitting the the latent space distribution given the prior.
     """
-    latent_mean = tf.clip_by_value(latent_mean, clip_value_min=-1e-10, clip_value_max=1e+10)
-    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+10)
-    _loss = -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
-    _loss = tf.where(tf.is_nan(_loss), 0, _loss)
-    _loss = tf.where(tf.is_inf(_loss), 0, _loss)
-    return _loss
+    latent_log_sigma_sq = tf.clip_by_value(latent_log_sigma_sq, clip_value_min=-1e-10, clip_value_max=1e+2)
+    return -0.5 * tf.reduce_sum(1 + latent_log_sigma_sq - tf.square(latent_mean) - tf.exp(latent_log_sigma_sq), 1)
 
 
 class ConditionalVAE(object):
     """ Conditional VAE
-    Inputs data must be normalized to be in range of 0 to 1
-    (since VAE uses Bernoulli distribution for reconstruction loss)
+    - Encoder: input (1d vector) -> FC x 3 -> latent
+    - Decoder: latent -> FC x 3 -> output (1d vector)
     """
 
-    def __init__(self, label_size, network_architecture=None, activation=tf.nn.softplus, learning_rate=0.001,
-                 batch_size=100, save_path=None, load_model=None):
+    def __init__(self, label_size, network_architecture, activation=tf.nn.sigmoid, learning_rate=0.001,
+                 batch_size=100, save_path=None, load_model=None, max_grad_norm=1):
         """
         :param dict network_architecture: dictionary with following elements
             n_input: shape of input
@@ -57,16 +50,12 @@ class ConditionalVAE(object):
         :param float learning_rate:
         :param int batch_size:
         """
-        if network_architecture:
-            self.network_architecture = network_architecture
-        else:
-            self.network_architecture = dict(n_hidden_encoder_1=500, n_hidden_encoder_2=500, n_hidden_decoder_1=500,
-                                             n_hidden_decoder_2=500, n_input=784, n_z=20)
-
+        self.network_architecture = network_architecture
         self.activation = activation
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.label_size = label_size
+        self.max_grad_norm = max_grad_norm
 
         # Initializer
         if "relu" in self.activation.__name__:
@@ -112,9 +101,10 @@ class ConditionalVAE(object):
             # full connect to get "mean" and "sigma"
             self.z_mean = full_connected(_layer, [self.network_architecture["n_hidden_encoder_2"],
                                                   self.network_architecture["n_z"]], self.ini)
+            # self.z_mean = tf.where(tf.is_inf(z_mean), 0.0, z_mean)
             self.z_log_sigma_sq = full_connected(_layer, [self.network_architecture["n_hidden_encoder_2"],
                                                           self.network_architecture["n_z"]], self.ini)
-
+            # self.z_log_sigma_sq = tf.where(tf.is_inf(tf.reduce_mean(z_log_sigma_sq)), tf.zeros([]), z_log_sigma_sq)
         # Draw one sample z from Gaussian distribution
         eps = tf.random_normal((self.batch_size, self.network_architecture["n_z"]), mean=0, stddev=1, dtype=tf.float32)
         # z = mu + sigma*epsilon
@@ -139,13 +129,19 @@ class ConditionalVAE(object):
 
         # Define loss function
         with tf.name_scope('loss'):
-            loss_1 = reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean)
-            loss_2 = latent_loss(self.z_mean, self.z_log_sigma_sq)
-            self.loss = tf.reduce_mean(loss_1 + loss_2)  # average over batch
+            self.re_loss = tf.reduce_mean(reconstruction_loss(original=self.x, reconstruction=self.x_decoder_mean))
+            self.latent_loss = tf.reduce_mean(latent_loss(self.z_mean, self.z_log_sigma_sq))
+            self.loss = tf.where(tf.is_nan(self.re_loss), 0.0, self.re_loss) + \
+                tf.where(tf.is_nan(self.latent_loss), 0.0, self.latent_loss)
 
         # Define optimizer
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train = slim.learning.create_train_op(self.loss, optimizer)
+        if self.max_grad_norm:
+            _var = tf.trainable_variables()
+            grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, _var), self.max_grad_norm)
+            self.train = optimizer.apply_gradients(zip(grads, _var))
+        else:
+            self.train = optimizer.minimize(self.loss)
         # saver
         self.saver = tf.train.Saver()
 
