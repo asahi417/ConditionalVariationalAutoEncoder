@@ -2,6 +2,7 @@ import logging
 import os
 import numpy as np
 import tensorflow as tf
+import sys
 
 
 def create_log(name):
@@ -61,20 +62,18 @@ def mnist_train(model, epoch, save_path="./", mode="supervised", input_image=Tru
             _x, _y = data.train.next_batch(model.batch_size)
             _x = shape_2d(_x, model.batch_size) if input_image else _x
 
-            if mode == "conditional":  # conditional unsupervised model
-                feed_val = [model.summary, model.loss, model.train]
-                feed_dict = {model.x: _x, model.y: _y}
-                summary, __result, _ = model.sess.run(feed_val, feed_dict=feed_dict)
+            if mode in ["conditional", "unsupervised"]:  # conditional unsupervised model
+                feed_val = [model.summary, model.loss, model.re_loss, model.latent_loss, model.train]
+                feed_dict = {model.x: _x, model.y: _y} if mode == "conditional" else {model.x: _x}
+                summary, loss, re_loss, latent_loss, _ = model.sess.run(feed_val, feed_dict=feed_dict)
+                __result = [loss, re_loss, latent_loss]
             elif mode == "supervised":  # supervised model
                 feed_val = [model.summary, model.loss, model.accuracy, model.train]
                 feed_dict = {model.x: _x, model.y: _y, model.is_training: True}
                 summary, loss, acc, _ = model.sess.run(feed_val, feed_dict=feed_dict)
                 __result = [loss, acc]
-            elif mode == "unsupervised":  # unsupervised model
-                feed_val = [model.summary, model.loss, model.train]
-                feed_dict = {model.x: _x}
-                summary, __result, _ = model.sess.run(feed_val, feed_dict=feed_dict)
-
+            else:
+                sys.exit("unknown mode !")
             _result.append(__result)
             model.writer.add_summary(summary, int(_b + _e * model.batch_size))
 
@@ -89,7 +88,8 @@ def mnist_train(model, epoch, save_path="./", mode="supervised", input_image=Tru
                         % (_e, acc, loss, _result[1], _result[0]))
         else:
             _result = np.mean(_result, 0)
-            logger.info("epoch %i: loss %0.3f" % (_e, _result))
+            logger.info("epoch %i: loss %0.3f, re loss %0.3f, latent loss %0.3f"
+                        % (_e, _result[0], _result[1], _result[2]))
 
         result.append(_result)
         if _e % 50 == 0:
@@ -98,4 +98,4 @@ def mnist_train(model, epoch, save_path="./", mode="supervised", input_image=Tru
 
     model.saver.save(model.sess, "%s/model.ckpt" % save_path)
     np.savez("%s/acc.npz" % save_path, loss=np.array(result), learning_rate=model.learning_rate, epoch=epoch,
-             batch_size=model.batch_size)
+             batch_size=model.batch_size, clip=model.max_grad_norm)
