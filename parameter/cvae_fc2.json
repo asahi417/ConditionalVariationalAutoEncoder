@@ -1,0 +1,8 @@
+{
+  "n_hidden_encoder_1": 500,
+  "n_hidden_encoder_2": 500,
+  "n_hidden_decoder_1": 500,
+  "n_hidden_decoder_2": 500,
+  "n_input":784,
+  "n_z": 20
+}
