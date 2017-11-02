@@ -4,26 +4,6 @@ import sys
 import json
 from util import mnist_train
 
-parser = argparse.ArgumentParser(description='This script is ...')
-
-parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
-                    help='name of model', metavar=None)
-
-parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
-                    choices=None, help='latent dimension', metavar=None)
-
-parser.add_argument('-b', '--batch_size', action='store', nargs='?', const=None, default=100, type=int,
-                    choices=None, help='batch size', metavar=None)
-
-parser.add_argument('-e', '--epoch', action='store', nargs='?', const=None, default=150, type=int,
-                    choices=None, help='epoch', metavar=None)
-
-parser.add_argument('-l', '--lr', action='store', nargs='?', const=None, default=0.005, type=float,
-                    choices=None, help='learning rate', metavar=None)
-
-parser.add_argument('-c', '--clip', action='store', nargs='?', const=None, default=None, type=float,
-                    choices=None, help='gradient clipping', metavar=None)
-
 
 def get_parameter(path, latent_dim):
     with open(path) as f:
@@ -36,6 +16,20 @@ def get_parameter(path, latent_dim):
 if __name__ == '__main__':
     # Ignore warning message by tensor flow
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    # Parser
+    parser = argparse.ArgumentParser(description='This script is ...')
+    parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
+                        help='name of model', metavar=None)
+    parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
+                        choices=None, help='latent dimension', metavar=None)
+    parser.add_argument('-b', '--batch_size', action='store', nargs='?', const=None, default=100, type=int,
+                        choices=None, help='batch size', metavar=None)
+    parser.add_argument('-e', '--epoch', action='store', nargs='?', const=None, default=150, type=int,
+                        choices=None, help='epoch', metavar=None)
+    parser.add_argument('-l', '--lr', action='store', nargs='?', const=None, default=0.005, type=float,
+                        choices=None, help='learning rate', metavar=None)
+    parser.add_argument('-c', '--clip', action='store', nargs='?', const=None, default=None, type=float,
+                        choices=None, help='gradient clipping', metavar=None)
     args = parser.parse_args()
     print("\n Start train %s \n" % args.model)
     save_path = "./log/%s_%i/" % (args.model, args.latent_dim)
