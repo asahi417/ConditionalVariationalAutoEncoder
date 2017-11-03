@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script is ...', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
                         metavar=None, help="""Name of model to use. 
-- vae: variational autoencoder\n- cvae_fc2: conditional vae with 2 fully connected layer
+- vae: variational autoencoder\n- cvae_fc3: conditional vae with 3 fully connected layer
 - cvae_cnn2: conditional vae with 2 cnn\n- cvae_cnn2: conditional vae with 3 cnn """)
     parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
                         choices=None, help='Dimension of latent vector. [default: 20]', metavar=None)

@@ -37,7 +37,7 @@ def plot_2d_embedded(model, feeder, mode, save_path=None, input_image=False, n=1
     plt.colorbar()
     plt.grid()
     if save_path:
-        plt.savefig("%sembedding.eps" % save_path, bbox_inches="tight")
+        # plt.savefig("%sembedding.eps" % save_path, bbox_inches="tight")
         plt.savefig("%sembedding.png" % save_path, bbox_inches="tight")
 
 
@@ -68,7 +68,7 @@ def generate_image_random(model, feeder, save_path=None, n=10, target_digit=9, s
         plt.colorbar()
         plt.tight_layout()
     if save_path:
-        plt.savefig("%sgenerated_image_rand_%i_%0.3f.eps" % (save_path, target_digit, std), bbox_inches="tight")
+        # plt.savefig("%sgenerated_image_rand_%i_%0.3f.eps" % (save_path, target_digit, std), bbox_inches="tight")
         plt.savefig("%sgenerated_image_rand_%i_%0.3f.png" % (save_path, target_digit, std), bbox_inches="tight")
 
 
@@ -97,7 +97,7 @@ def generate_image_mean(model, feeder, save_path=None, input_image=False):
         plt.colorbar()
         plt.tight_layout()
     if save_path:
-        plt.savefig(save_path + "generated_image_mean.eps", bbox_inches="tight")
+        # plt.savefig(save_path + "generated_image_mean.eps", bbox_inches="tight")
         plt.savefig(save_path + "generated_image_mean.png", bbox_inches="tight")
 
 
@@ -122,7 +122,7 @@ def plot_reconstruct(model, mode, feeder, _n=5, save_path=None, input_image=Fals
         plt.colorbar()
         plt.tight_layout()
     if save_path:
-        plt.savefig(save_path + "reconstruction.eps", bbox_inches="tight")
+        # plt.savefig(save_path + "reconstruction.eps", bbox_inches="tight")
         plt.savefig(save_path + "reconstruction.png", bbox_inches="tight")
 
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script is ...', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
                         metavar=None, help="""Name of model to use. 
-- vae: variational autoencoder\n- cvae_fc2: conditional vae with 2 fully connected layer
+- vae: variational autoencoder\n- cvae_fc3: conditional vae with 3 fully connected layer
 - cvae_cnn2: conditional vae with 2 cnn\n- cvae_cnn2: conditional vae with 3 cnn """)
     parser.add_argument('-m', '--plot_type', action='store', nargs='?', const=None, default=None, type=str,
                         choices=None, metavar=None, help="""Plot type.\n- re: reconstruction
@@ -142,9 +142,9 @@ if __name__ == '__main__':
 - gen_rand: generate image by the mean latent vector with additive gaussian noise.
 - embed: embed 2 dimension for visualization""")
     parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
-                        choices=None, help='Latent dimension.', metavar=None)
+                        choices=None, help='Latent dimension. [default: 20]', metavar=None)
     parser.add_argument('-p', '--progress', action='store', nargs='?', const=None, default=None, type=str, metavar=None,
-                        choices=None, help='Use model in progress of learning (model is saved each 50 epoch)')
+                        choices=None, help='Use progress model (model is saved each 50 epoch). [default: None]')
     parser.add_argument('-s', '--std', action='store', nargs='?', const=None, default=0.1, type=float,
                         choices=None, help='Std of gaussian noise for `gen_rand` plotting. [default: 0.1]', metavar=None)
     parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=0, type=int, metavar=None,
