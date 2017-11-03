@@ -15,18 +15,42 @@ def get_parameter(path, latent_dim):
     return p
 
 
-def generate_image_random(model, feeder, save_path=None, mean_num=500, target_digit=9, std=0.1,
-                          input_image=False):
+def plot_2d_embedded(model, feeder, mode, save_path=None, input_image=False, n=10000):
+    y, z, cnt = [], [], 0
+    while cnt < n:
+        _x, _y = feeder.train.next_batch(model.batch_size)
+        y.append(_y)
+        _x = shape_2d(_x, model.batch_size) if input_image else _x
+        if mode == "conditional":
+            _z = model.encode(_x, _y)
+        elif mode == "unsupervised":
+            _z = model.encode(_x)
+        else:
+            sys.exit("unknown mode %s !" % mode)
+        z.append(_z)
+        cnt += model.batch_size
+    z = np.vstack(z)
+    y = np.vstack(y)
+    # plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(z[:, 0], z[:, 1], c=np.argmax(y, 1))
+    plt.colorbar()
+    plt.grid()
+    if save_path:
+        plt.savefig("%sembedding.eps" % save_path, bbox_inches="tight")
+        plt.savefig("%sembedding.png" % save_path, bbox_inches="tight")
+
+
+def generate_image_random(model, feeder, save_path=None, n=10, target_digit=9, std=0.01, input_image=False):
     # generate latent vector
     _code = []
-    for i in range(mean_num):
+    for i in range(500):
         _x, _y = feeder.test.next_batch(model.batch_size)
         _x = shape_2d(_x, model.batch_size) if input_image else _x
         __code = model.encode(_x, _y).tolist()
         for __x, __y, _c in zip(_x, _y, __code):
             if np.argmax(__y) == target_digit:
                 _code.append(_c)
-
     # label
     o_h = np.zeros(model.label_size)
     o_h[target_digit] = 1
@@ -37,7 +61,7 @@ def generate_image_random(model, feeder, save_path=None, mean_num=500, target_di
 
     generated = model.decode(true_label, z)
     plt.figure(figsize=(6, 10))
-    for i in range(10):
+    for i in range(n):
         plt.subplot(5, 2, i + 1)
         plt.imshow(generated[i].reshape(28, 28), vmin=0, vmax=1, cmap="gray")
         plt.title("Generated %i" % np.argmax(true_label[i]))
@@ -48,10 +72,9 @@ def generate_image_random(model, feeder, save_path=None, mean_num=500, target_di
         plt.savefig("%sgenerated_image_rand_%i_%0.3f.png" % (save_path, target_digit, std), bbox_inches="tight")
 
 
-def generate_image_mean(model, feeder, save_path=None, mean_num=500, input_image=False):
-
+def generate_image_mean(model, feeder, save_path=None, input_image=False):
     _code = {0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: []}
-    for i in range(mean_num):
+    for i in range(500):
         _x, _y = feeder.test.next_batch(model.batch_size)
         _x = shape_2d(_x, model.batch_size) if input_image else _x
         __code = model.encode(_x, _y).tolist()
@@ -78,13 +101,13 @@ def generate_image_mean(model, feeder, save_path=None, mean_num=500, input_image
         plt.savefig(save_path + "generated_image_mean.png", bbox_inches="tight")
 
 
-def plot_reconstruct(model, _mode, feeder, _n=5, save_path=None, input_image=False):
+def plot_reconstruct(model, mode, feeder, _n=5, save_path=None, input_image=False):
     # feed test data and reconstruct
     _x, _y = feeder.test.next_batch(model.batch_size)
     _x = shape_2d(_x, model.batch_size) if input_image else _x
-    if _mode == "conditional":
+    if mode == "conditional":
         reconstruction = model.reconstruct(_x, _y)
-    elif _mode == "unsupervised":
+    elif mode == "unsupervised":
         reconstruction = model.reconstruct(_x)
     # plot
     plt.figure(figsize=(8, 12))
@@ -106,25 +129,31 @@ def plot_reconstruct(model, _mode, feeder, _n=5, save_path=None, input_image=Fal
 if __name__ == '__main__':
     # Ignore warning message by tensor flow
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    np.random.seed(10)
     # Parser
     parser = argparse.ArgumentParser(description='This script is ...')
     parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
                         help='name of model', metavar=None)
+    parser.add_argument('-m', '--plot_type', action='store', nargs='?', const=None, default=None, type=str,
+                        choices=None, metavar=None, help='''plot type \n - re: reconstruction \n - gen_ave: generate 
+                        image by the mean latent vector \n - gen_rand: generate image by the mean latent vector with 
+                        additive gaussian noise. \n - embed: embed 2 dimension for visualization''')
     parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
-                        choices=None, help='latent dimension', metavar=None)
-    parser.add_argument('-p', '--progress', action='store', nargs='?', const=None, default=None, type=str,
-                        choices=None, help='progress model', metavar=None)
+                        choices=None, help='Latent dimension.', metavar=None)
+    parser.add_argument('-p', '--progress', action='store', nargs='?', const=None, default=None, type=str, metavar=None,
+                        choices=None, help='Use model in progress of learning (model is saved each 50 epoch)')
     parser.add_argument('-s', '--std', action='store', nargs='?', const=None, default=0.1, type=float,
-                        choices=None, help='std of random generated data', metavar=None)
+                        choices=None, help='Std of gaussian noise for `gen_rand` plotting.', metavar=None)
     parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=0, type=int,
-                        choices=None, help='target of random generated data', metavar=None)
+                        choices=None, help='Target digit to generate.', metavar=None)
     args = parser.parse_args()
 
     print("\n Plot the result of %s \n" % args.model)
     pr = "progress-%s-" % args.progress if args.progress else ""
-    acc = np.load("./log/%s_%i/%sacc.npz" % (args.model, args.latent_dim, pr))
     param = get_parameter("./parameter/%s.json" % args.model, args.latent_dim)
+    acc = np.load("./log/%s_%i/%sacc.npz" % (args.model, args.latent_dim, pr))
     opt = dict(network_architecture=param, batch_size=acc["batch_size"])
+    # opt = dict(network_architecture=param, batch_size=100)
 
     if args.model == "cvae_cnn3_0":
         from model import CvaeCnn3_0 as Model
@@ -136,7 +165,7 @@ if __name__ == '__main__':
         from model import CvaeFc2 as Model
         _mode, _inp_img = "conditional", False
     elif args.model == "vae":
-        from model import VAE as Model
+        from model import VariationalAutoencoder as Model
         _mode, _inp_img = "unsupervised", False
     else:
         sys.exit("unknown model !")
@@ -151,11 +180,17 @@ if __name__ == '__main__':
     if not os.path.exists(fig_path):
         os.mkdir(fig_path)
 
-    plot_reconstruct(model_instance, _mode, mnist, 5, input_image=_inp_img, save_path=fig_path)
+    if args.plot_type is None or args.plot_type == "re":
+        plot_reconstruct(model_instance, feeder=mnist, mode=_mode, input_image=_inp_img, save_path=fig_path)
+    if args.latent_dim == 2:
+        if args.plot_type is None or args.plot_type == "embed":
+            plot_2d_embedded(model_instance, mnist, mode=_mode, input_image=_inp_img, save_path=fig_path)
     if _mode == "conditional":
-        generate_image_mean(model_instance, mnist, input_image=_inp_img, save_path=fig_path)
-        generate_image_random(model_instance, mnist, input_image=_inp_img, save_path=fig_path, std=args.std,
-                              target_digit=args.target)
+        if args.plot_type is None or args.plot_type == "gen_ave":
+            generate_image_mean(model_instance, mnist, input_image=_inp_img, save_path=fig_path)
+        if args.plot_type is None or args.plot_type == "gen_rand":
+            generate_image_random(model_instance, mnist, input_image=_inp_img, save_path=fig_path, std=args.std,
+                                  target_digit=args.target)
 
 
 
