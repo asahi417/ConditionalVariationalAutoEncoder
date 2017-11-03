@@ -205,6 +205,7 @@ class ConditionalVAE(object):
             self.train = optimizer.apply_gradients(zip(grads, _var))
         else:
             self.train = optimizer.minimize(self.loss)
+
         # saver
         self.saver = tf.train.Saver()
 
