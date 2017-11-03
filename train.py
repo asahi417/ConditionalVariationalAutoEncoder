@@ -54,6 +54,9 @@ if __name__ == '__main__':
     elif args.model == "vae":
         from model import VariationalAutoencoder as Model
         _mode, _inp_img = "unsupervised", False
+    elif args.model == "cnn":
+        from model import CNN as Model
+        _mode, _inp_img = "supervised", True
     else:
         sys.exit("unknown model !")
 
