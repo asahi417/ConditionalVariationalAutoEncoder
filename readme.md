@@ -2,19 +2,20 @@
 [![dep1](https://img.shields.io/badge/Tensorflow-1.3+-blue.svg)](https://www.tensorflow.org/)
 [![dep1](https://img.shields.io/badge/Status-Work_In_Progress-orange.svg)](https://www.tensorflow.org/)
 
-Implement variants of Variational Autoencoder by tensorflow.
+Implement Conditional Variational Autoencoder by tensorflow.
 Experiment for MNIST dataset.
 
 
 ## Conditional VAE
-I have built two type of CVAE:
-1. 3CNN (`./model/cvae_cnn3.py`)
+I have built three type of CVAE:
+1. [3CNN](model/cvae_cnn3_1.py)
     - encoder: CNN x 3 + FC x 1
     - decoder: deCNN x 3 + FC x 1 
 2. 2CNN (`./model/cvae_cnn2.py`)
     - encoder: CNN x 2 + FC x 1
     - decoder: deCNN x 2 + FC x 1
- 
+3. 2FC (`./model/cvae_cnn2.py`)
+
 2CNN model use CNN with fixed stride (2 x 2) and kernel size (4 x 4).
 The problem of this model is that, the size of learnable variables of FC (fully connected) layer is much larger 
 than that of CNN layer.
