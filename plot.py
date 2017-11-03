@@ -131,21 +131,24 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
     np.random.seed(10)
     # Parser
-    parser = argparse.ArgumentParser(description='This script is ...')
+    parser = argparse.ArgumentParser(description='This script is ...', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
-                        help='name of model', metavar=None)
+                        metavar=None, help="""Name of model to use. 
+- vae: variational autoencoder\n- cvae_fc2: conditional vae with 2 fully connected layer
+- cvae_cnn2: conditional vae with 2 cnn\n- cvae_cnn2: conditional vae with 3 cnn """)
     parser.add_argument('-m', '--plot_type', action='store', nargs='?', const=None, default=None, type=str,
-                        choices=None, metavar=None, help='''plot type \n - re: reconstruction \n - gen_ave: generate 
-                        image by the mean latent vector \n - gen_rand: generate image by the mean latent vector with 
-                        additive gaussian noise. \n - embed: embed 2 dimension for visualization''')
+                        choices=None, metavar=None, help="""Plot type.\n- re: reconstruction
+- gen_ave: generate image by the mean latent vector
+- gen_rand: generate image by the mean latent vector with additive gaussian noise.
+- embed: embed 2 dimension for visualization""")
     parser.add_argument('-n', '--latent_dim', action='store', nargs='?', const=None, default=20, type=int,
                         choices=None, help='Latent dimension.', metavar=None)
     parser.add_argument('-p', '--progress', action='store', nargs='?', const=None, default=None, type=str, metavar=None,
                         choices=None, help='Use model in progress of learning (model is saved each 50 epoch)')
     parser.add_argument('-s', '--std', action='store', nargs='?', const=None, default=0.1, type=float,
-                        choices=None, help='Std of gaussian noise for `gen_rand` plotting.', metavar=None)
-    parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=0, type=int,
-                        choices=None, help='Target digit to generate.', metavar=None)
+                        choices=None, help='Std of gaussian noise for `gen_rand` plotting. [default: 0.1]', metavar=None)
+    parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=0, type=int, metavar=None,
+                        choices=None, help='Target digit to generate for `gen_rand` plotting. [default: 0]')
     args = parser.parse_args()
 
     print("\n Plot the result of %s \n" % args.model)
@@ -158,11 +161,11 @@ if __name__ == '__main__':
     if args.model == "cvae_cnn3_0":
         from model import CvaeCnn3_0 as Model
         _mode, _inp_img = "conditional", True
-    elif args.model == "cvae_cnn3_1":
-        from model import CvaeCnn3_1 as Model
+    elif args.model == "cvae_cnn3":
+        from model import CvaeCnn3 as Model
         _mode, _inp_img = "conditional", True
-    elif args.model == "cvae_fc2":
-        from model import CvaeFc2 as Model
+    elif args.model == "cvae_fc3":
+        from model import CvaeFc3 as Model
         _mode, _inp_img = "conditional", False
     elif args.model == "vae":
         from model import VariationalAutoencoder as Model
