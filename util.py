@@ -94,8 +94,9 @@ def mnist_train(model, epoch, save_path="./", mode="supervised", input_image=Tru
         result.append(_result)
         if _e % 50 == 0:
             model.saver.save(model.sess, "%s/progress-%i-model.ckpt" % (save_path, _e))
-            np.save("%s/progress-%i-acc.npy" % (save_path, _e), np.array(result))
-
+            np.savez("%s/progress-%i-acc.npz" % (save_path, _e), loss=np.array(result),
+                     learning_rate=model.learning_rate, epoch=epoch, batch_size=model.batch_size,
+                     clip=model.max_grad_norm)
     model.saver.save(model.sess, "%s/model.ckpt" % save_path)
     np.savez("%s/acc.npz" % save_path, loss=np.array(result), learning_rate=model.learning_rate, epoch=epoch,
              batch_size=model.batch_size, clip=model.max_grad_norm)

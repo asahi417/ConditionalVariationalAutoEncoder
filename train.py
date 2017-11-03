@@ -43,11 +43,14 @@ if __name__ == '__main__':
     elif args.model == "cvae_cnn3_1":
         from model import CvaeCnn3_1 as Model
         _mode, _inp_img = "conditional", True
+    elif args.model == "cvae_cnn2":
+        from model import CvaeCnn2 as Model
+        _mode, _inp_img = "conditional", True
     elif args.model == "cvae_fc2":
         from model import CvaeFc2 as Model
         _mode, _inp_img = "conditional", False
     elif args.model == "vae":
-        from model import VAE as Model
+        from model import VariationalAutoencoder as Model
         _mode, _inp_img = "unsupervised", False
     else:
         sys.exit("unknown model !")
