@@ -50,41 +50,28 @@ The trained model is saved at `./log` and figures are at `./figure`.
 Check `python train.py -h` and `python plot.py -h` to see the detail about the options. 
 
 ## Result of Each Model for Mnist
-Let's see some results for Mnist data. 
+Let's see some results for Mnist data by 3CNN model. 
 
 ### Reconstruction
-Here is the reconstruction result of 3CNN model.
+
 <p align="center">
   <img src="./img/cvae_cnn3_20/reconstruction.png" width="500">
   <br><i>reconstruction (3CNN)</i>
 </p>
 
-<p align="center">
-  <img src="./img/cvae_fc3_20/reconstruction.png" width="500">
-  <br><i>reconstruction (3FC)</i>
-</p>
-
-<p align="center">
-  <img src="./img/vae_20/reconstruction.png" width="500">
-  <br><i>reconstruction (VAE)</i>
-</p>
-
-
 ### Generate by Random Variable
 
 <p align="center">
-  <img src="./img/cvae_cnn3_2/generated_image_rand_5_.png" width="500">
+  <img src="./img/cvae_cnn3_2/generated_image_rand_5_0.100.png" width="500">
   <br><i>2d latent space</i>
 </p>
 
-
-Here is the reconstruction result of 2CNN model. 
-<p align="center">
-  <img src="./img/cvae_2cnn_reconst.png" width="500">
-  <br><i>reconstruction 2CNN model</i>
-</p>
-
 ### 2-D Latent Space
+
+<p align="center">
+  <img src="./img/cvae_cnn3_2/embedding.png" width="500">
+  <br><i>2d latent space</i>
+</p>
 
 ## Appendix
 To find the best stride and depth of layer, simple deep CNN model for classification has been implemented.
