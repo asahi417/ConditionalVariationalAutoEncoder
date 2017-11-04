@@ -47,6 +47,7 @@ python plot.py cvae_cnn3 -n 2
 ```
 
 The trained model is saved at `./log` and figures are at `./figure`.
+Check `python train.py -h` and `python plot.py -h` to see the detail about the options. 
 
 ## Result of Each Model for Mnist
 Let's see some results for Mnist data. 
