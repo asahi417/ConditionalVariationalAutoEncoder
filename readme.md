@@ -63,15 +63,26 @@ Let's see some results for Mnist data by 3CNN model.
 
 <p align="center">
   <img src="./img/cvae_cnn3_2/generated_image_rand_5_0.100.png" width="500">
-  <br><i>2d latent space</i>
+  <br><i>Generated digit</i>
 </p>
 
 ### 2-D Latent Space
+Here is the latent space of CVAE.
+<p align="center">
+  <img src="./img/cvae_cnn3_2/embedding.png" width="500">
+  <br><i>2d latent space (CVAE)</i>
+</p>
+
+It seems in this space it is hard to distinguish each digits, and this space can be regarded as the common feature
+space of hand written digit.
+
+On the other hand, the latent space of VAE is shown as below.
 
 <p align="center">
   <img src="./img/cvae_cnn3_2/embedding.png" width="500">
-  <br><i>2d latent space</i>
+  <br><i>2d latent space (VAE)</i>
 </p>
+
 
 ## Appendix
 To find the best stride and depth of layer, simple deep CNN model for classification has been implemented.
