@@ -50,24 +50,29 @@ The trained model is saved at `./log` and figures are at `./figure`.
 
 ## Result of Each Model for Mnist
 Let's see some results for Mnist data. 
-### Reconstruction
 
+### Reconstruction
 Here is the reconstruction result of 3CNN model.
 <p align="center">
-  <img src="./img/cvae_reconst.png" width="500">
-  <br><i>reconstruction 3CNN model</i>
+  <img src="./img/cvae_cnn3_20/reconstruction.png" width="500">
+  <br><i>reconstruction (3CNN)</i>
 </p>
 
-By setting latent dimension for two, you can visualize the latent space.
 <p align="center">
-  <img src="./img/cvae_2d.png" width="500">
-  <br><i>2d latent space</i>
+  <img src="./img/cvae_fc3_20/reconstruction.png" width="500">
+  <br><i>reconstruction (3FC)</i>
 </p>
+
+<p align="center">
+  <img src="./img/vae_20/reconstruction.png" width="500">
+  <br><i>reconstruction (VAE)</i>
+</p>
+
 
 ### Generate by Random Variable
-Generation of given label.
+
 <p align="center">
-  <img src="./img/cvae_gen.png" width="500">
+  <img src="./img/cvae_cnn3_2/generated_image_rand_5_.png" width="500">
   <br><i>2d latent space</i>
 </p>
 
