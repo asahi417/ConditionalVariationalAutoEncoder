@@ -41,24 +41,39 @@ def plot_2d_embedded(model, feeder, mode, save_path=None, input_image=False, n=1
         plt.savefig("%sembedding.png" % save_path, bbox_inches="tight")
 
 
-def generate_image_random(model, feeder, save_path=None, n=10, target_digit=9, std=0.01, input_image=False):
+def generate_image_random(model, feeder, save_path=None, n=10, target_digit=None, std=0.01, input_image=False):
     # generate latent vector
-    _code = []
-    for i in range(500):
-        _x, _y = feeder.test.next_batch(model.batch_size)
-        _x = shape_2d(_x, model.batch_size) if input_image else _x
-        __code = model.encode(_x, _y).tolist()
-        for __x, __y, _c in zip(_x, _y, __code):
-            if np.argmax(__y) == target_digit:
-                _code.append(_c)
-    # label
-    o_h = np.zeros(model.label_size)
-    o_h[target_digit] = 1
-    true_label = np.tile(o_h, [model.batch_size, 1])
+    if target_digit:
+        _code = []
+        for i in range(500):
+            _x, _y = feeder.test.next_batch(model.batch_size)
+            _x = shape_2d(_x, model.batch_size) if input_image else _x
+            __code = model.encode(_x, _y).tolist()
+            for __x, __y, _c in zip(_x, _y, __code):
+                if np.argmax(__y) == target_digit:
+                    _code.append(_c)
+        o_h = np.zeros(model.label_size)
+        o_h[target_digit] = 1
+        _len = model.batch_size
+        z = np.tile(np.mean(_code, 0), [_len, 1])
+    else:
+        target_digit = "all"
+        _code = {0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: []}
+        for i in range(500):
+            _x, _y = mnist.test.next_batch(model.batch_size)
+            _x = shape_2d(_x, model.batch_size) if input_image else _x
+            __code = model.encode(_x, _y).tolist()
+            for __x, __y, _c in zip(_x, _y, __code):
+                _code[int(np.argmax(__y))].append(_c)
+        # convert label to one hot vector
+        target_vector = [i for i in range(model.label_size)]
+        o_h = np.eye(model.label_size)[target_vector]
+        _len = int(model.batch_size / model.label_size)
+        tmp = np.vstack([np.mean(_code[_a], 0) for _a in range(model.label_size)])
+        z = np.tile(tmp, [_len, 1])
 
-    z = np.tile(np.mean(_code, 0), [model.batch_size, 1])
+    true_label = np.tile(o_h, reps=[_len, 1])
     z += np.random.randn(model.batch_size, model.network_architecture["n_z"]) * std
-
     generated = model.decode(true_label, z)
     plt.figure(figsize=(6, 10))
     for i in range(n):
@@ -69,7 +84,7 @@ def generate_image_random(model, feeder, save_path=None, n=10, target_digit=9, s
         plt.tight_layout()
     if save_path:
         # plt.savefig("%sgenerated_image_rand_%i_%0.3f.eps" % (save_path, target_digit, std), bbox_inches="tight")
-        plt.savefig("%sgenerated_image_rand_%i_%0.3f.png" % (save_path, target_digit, std), bbox_inches="tight")
+        plt.savefig("%sgenerated_image_rand_%s_%0.3f.png" % (save_path, str(target_digit), std), bbox_inches="tight")
 
 
 def generate_image_mean(model, feeder, save_path=None, input_image=False):
@@ -147,8 +162,9 @@ if __name__ == '__main__':
                         choices=None, help='Use progress model (model is saved each 50 epoch). [default: None]')
     parser.add_argument('-s', '--std', action='store', nargs='?', const=None, default=0.1, type=float,
                         choices=None, help='Std of gaussian noise for `gen_rand` plotting. [default: 0.1]', metavar=None)
-    parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=0, type=int, metavar=None,
-                        choices=None, help='Target digit to generate for `gen_rand` plotting. [default: 0]')
+    parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=None, type=int, metavar=None,
+                        choices=None,
+                        help='Target digit to generate for `gen_rand` plotting. [default: None (plot all digit)]')
     args = parser.parse_args()
 
     print("\n Plot the result of %s \n" % args.model)
