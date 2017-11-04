@@ -4,6 +4,7 @@ import sys
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from util import mnist_loader, shape_2d
 
 
@@ -144,7 +145,10 @@ def plot_reconstruct(model, mode, feeder, _n=5, save_path=None, input_image=Fals
 if __name__ == '__main__':
     # Ignore warning message by tensor flow
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    # set NumPy random seed
     np.random.seed(10)
+    # set TensorFlow random seed
+    tf.set_random_seed(10)
     # Parser
     parser = argparse.ArgumentParser(description='This script is ...', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('model', action='store', nargs=None, const=None, default=None, type=str, choices=None,
