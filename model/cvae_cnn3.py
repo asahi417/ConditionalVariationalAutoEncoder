@@ -134,20 +134,20 @@ class ConditionalVAE(object):
             _out, _in, ks = 16, _ch, [6, 6]
             _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
+            # -print(_out * _in * ks[0] * ks[1])
             # convolution 2
             _out, _in, ks = 32, _out, [4, 4]
             _layer = convolution(_layer, ks + [_in, _out], [3, 3], self.ini_c)
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
+            # -print(_out * _in * ks[0] * ks[1])
             # convolution 3
             _out, _in, ks = 64, _out, [2, 2]
             _layer = convolution(_layer, ks + [_in, _out], [2, 2], self.ini_c)
             _layer = self.activation(_layer)
-            print(_out * _in * ks[0] * ks[1])
+            # -print(_out * _in * ks[0] * ks[1])
             # full connect to get "mean" and "sigma"
             _layer = slim.flatten(_layer)
-            print(_layer.shape[0])
+            # -print(_layer.shape[0])
             _shape = _layer.shape.as_list()
 
             self.z_mean = full_connected(_layer, [_shape[-1], self.network_architecture["n_z"]], self.ini)
@@ -171,23 +171,23 @@ class ConditionalVAE(object):
             _out = 64
             _layer = full_connected(_layer, [_in_size, int(_w3 * _h3 * _out)], self.ini)
             _layer = self.activation(_layer)
-            print(_in_size * _w3 * _h3 * _out)
+            # -print(_in_size * _w3 * _h3 * _out)
             # reshape to the image
             _layer = tf.reshape(_layer, [-1, _w3, _h3, _out])
             # deconvolution 1
             _out, _in, ks = 32, _out, [2, 2]
             _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w2, _h2, _out], stride_2, self.ini_c)
             _layer = self.activation(_layer)
-            print(_in * _out * ks[0] * ks[1])
+            # -print(_in * _out * ks[0] * ks[1])
             # deconvolution 2
             _out, _in, ks = 16, _out, [3, 3]
             _layer = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w1, _h1, _out], stride_1, self.ini_c)
             _layer = self.activation(_layer)
-            print(_in * _out * ks[0] * ks[1])
+            # -print(_in * _out * ks[0] * ks[1])
             # deconvolution 3
             _out, _in, ks = 1, _out, [4, 4]
             _logit = deconvolution(_layer, ks + [_out, _in], [self.batch_size, _w0, _h0, _out], stride_0, self.ini_c)
-            print(_in * _out * ks[0] * ks[1])
+            # -print(_in * _out * ks[0] * ks[1])
             self.x_decoder_mean = tf.nn.sigmoid(_logit)
 
         # Define loss function
