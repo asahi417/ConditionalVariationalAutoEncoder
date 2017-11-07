@@ -42,40 +42,53 @@ def plot_2d_embedded(model, feeder, mode, save_path=None, input_image=False, n=1
         plt.savefig("%sembedding.png" % save_path, bbox_inches="tight")
 
 
-def generate_image_random(model, feeder, save_path=None, n=10, target_digit=None, std=0.01, input_image=False):
+def generate_image_random(model, feeder, save_path=None, n=10, target_digit=None, std=0.01, input_image=False,
+                          seed=True):
     # generate latent vector
-    if target_digit:
-        _code = []
-        for i in range(500):
-            _x, _y = feeder.test.next_batch(model.batch_size)
-            _x = shape_2d(_x, model.batch_size) if input_image else _x
-            __code = model.encode(_x, _y).tolist()
-            for __x, __y, _c in zip(_x, _y, __code):
-                if np.argmax(__y) == target_digit:
-                    _code.append(_c)
-        o_h = np.zeros(model.label_size)
-        o_h[target_digit] = 1
-        _len = model.batch_size
-        z = np.tile(np.mean(_code, 0), [_len, 1])
+    if seed:
+        if target_digit:
+            _code = []
+            for i in range(500):
+                _x, _y = feeder.test.next_batch(model.batch_size)
+                _x = shape_2d(_x, model.batch_size) if input_image else _x
+                __code = model.encode(_x, _y).tolist()
+                for __x, __y, _c in zip(_x, _y, __code):
+                    if np.argmax(__y) == target_digit:
+                        _code.append(_c)
+            o_h = np.zeros(model.label_size)
+            o_h[target_digit] = 1
+            _len = model.batch_size
+            z = np.tile(np.mean(_code, 0), [_len, 1])
+        else:
+            target_digit = "all"
+            _code = {0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: []}
+            for i in range(500):
+                _x, _y = mnist.test.next_batch(model.batch_size)
+                _x = shape_2d(_x, model.batch_size) if input_image else _x
+                __code = model.encode(_x, _y).tolist()
+                for __x, __y, _c in zip(_x, _y, __code):
+                    _code[int(np.argmax(__y))].append(_c)
+            # convert label to one hot vector
+            target_vector = [i for i in range(model.label_size)]
+            o_h = np.eye(model.label_size)[target_vector]
+            _len = int(model.batch_size / model.label_size)
+            tmp = np.vstack([np.mean(_code[_a], 0) for _a in range(model.label_size)])
+            z = np.tile(tmp, [_len, 1])
+        true_label = np.tile(o_h, reps=[_len, 1])
+        z += np.random.randn(model.batch_size, model.network_architecture["n_z"]) * std
+        generated = model.decode(true_label, z)
     else:
-        target_digit = "all"
-        _code = {0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: []}
-        for i in range(500):
-            _x, _y = mnist.test.next_batch(model.batch_size)
-            _x = shape_2d(_x, model.batch_size) if input_image else _x
-            __code = model.encode(_x, _y).tolist()
-            for __x, __y, _c in zip(_x, _y, __code):
-                _code[int(np.argmax(__y))].append(_c)
-        # convert label to one hot vector
-        target_vector = [i for i in range(model.label_size)]
-        o_h = np.eye(model.label_size)[target_vector]
-        _len = int(model.batch_size / model.label_size)
-        tmp = np.vstack([np.mean(_code[_a], 0) for _a in range(model.label_size)])
-        z = np.tile(tmp, [_len, 1])
+        if target_digit:
+            o_h = np.zeros(model.label_size)
+            o_h[target_digit] = 1
+            _len = model.batch_size
+        else:
+            target_vector = [i for i in range(model.label_size)]
+            o_h = np.eye(model.label_size)[target_vector]
+            _len = int(model.batch_size / model.label_size)
+        true_label = np.tile(o_h, reps=[_len, 1])
+        generated = model.decode(true_label, std=std)
 
-    true_label = np.tile(o_h, reps=[_len, 1])
-    z += np.random.randn(model.batch_size, model.network_architecture["n_z"]) * std
-    generated = model.decode(true_label, z)
     plt.figure(figsize=(6, 10))
     for i in range(n):
         plt.subplot(5, 2, i + 1)
@@ -169,6 +182,9 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', action='store', nargs='?', const=None, default=None, type=int, metavar=None,
                         choices=None,
                         help='Target digit to generate for `gen_rand` plotting. [default: None (plot all digit)]')
+    parser.add_argument('-sd', '--seed', action='store', nargs='?', const=None, default=True, type=bool, metavar=None,
+                        choices=None,
+                        help='If use seed for `gen_rand` plotting. [default: True]')
     args = parser.parse_args()
 
     print("\n Plot the result of %s \n" % args.model)
@@ -213,7 +229,7 @@ if __name__ == '__main__':
             generate_image_mean(model_instance, mnist, input_image=_inp_img, save_path=fig_path)
         if args.plot_type is None or args.plot_type == "gen_rand":
             generate_image_random(model_instance, mnist, input_image=_inp_img, save_path=fig_path, std=args.std,
-                                  target_digit=args.target)
+                                  target_digit=args.target, seed=args.seed)
 
 
 

@@ -1,5 +1,5 @@
 # Conditional Variational Autoencoder
-[![dep1](https://img.shields.io/badge/Tensorflow-1.3+-blue.svg)](https://www.tensorflow.org/)
+[![dep1](https://img.shields.io/badge/Tensorflow-1.3+-blue.svg)](https://www.tensorflow.org/) [![license](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://github.com/asahi417/ConditionalVariationalAutoEncoder/blob/master/LICENSE)
 
 Implement 
 [CVAE (Conditional Variational Autoencoder)](http://papers.nips.cc/paper/5352-semi-supervised-learning-with-deep-generative-models)
